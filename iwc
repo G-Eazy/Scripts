@@ -1,0 +1,36 @@
+#!/bin/bash
+
+# Improved Word Count. Basically just included recursive feature
+
+cmd="wc"
+args=""
+IFS=' '
+for arg in "$@"; do
+    if [ "$(echo $arg | grep -c -h '-')" != "0" ]; then
+        cmd="$cmd $arg"
+    else
+        args="$args $arg"
+    fi
+done
+
+declare -i sum
+sum=0
+
+function rec() {
+    for file in $@; do
+        if [ -d $file ]; then
+            rec "$file/*"
+            continue
+        fi
+        wc=$($cmd $file)
+        num=$(echo $wc | tr -d aA-zZ./)
+        sum=$((sum + num))
+        name=$(echo $wc | tr -d 0-9)
+        printf "\t%s\t%s\n" "$num" "$name"
+    done
+}
+
+rec $args
+if [ ! $((num - sum)) -eq 0 ]; then
+    printf "\t%s\t%s\n" "$sum" " sum"
+fi

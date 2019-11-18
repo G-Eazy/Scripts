@@ -1,0 +1,66 @@
+#!/bin/bash
+
+# The almighty timer
+
+# Create file if missing
+if [ ! -f ~/.getToClass ]; then
+    echo "
+ _____    _____   _______        ________   ______
+/    /|  /    /| /      /|      /       /| /     /|
+*****/   *****/  *******/       ********/  ****** |
+* |  __  * |___     * |            * |     * |  * |
+* | / /| */   /|    * |            * |     * |  * |
+* | ** | *****/     * |            * |     * |  * |
+* |__* | * |___     * |            * |     * |__* |
+*/   * | */   /|    * |            * |     */   * |
+******/  *****/     */             */      ******/
+    ______   _        ___      _____   _____      _
+   /     /| //|      /  /\    /    /| /    /|    //|
+   ******/  * |      ***  /   *****/  *****/     * |
+   * |      * |     * | */|   * |___  * |___     * |
+   * |      * |     * | */|   */   /| */   /|    * |
+   * |      * |     ***** |   ***** | ***** |    */
+   * |____  * |___  * | * |       * |     * |     __
+   */    /| */   /| * | * |       * |     * |    / /|
+   ******/  *****/  */  */    *****/  *****/     **/
+    " >> ~/.getToClass
+fi
+
+declare -i time
+
+mins=$1
+timer=$mins
+time=$((mins * 60))
+start=$SECONDS
+duration=$(( SECONDS - start))
+pause_len=0
+echo "setting a timer for $mins minutes"
+while [ $duration -lt $time ]; do  
+    sleep 3s        # save some processor use
+    read -t 1 input
+    if [ "$input" == "pause" ] || [ "$input" == "p" ]; then
+        duration=$(( SECONDS - start - pause_len))
+        echo "pausing at $((duration/60)) / $mins minutes"
+        pause_len_start=$SECONDS
+        read input2
+        while [ "$input2" != "resume" ] && [ "$input2" != "r" ]; do
+            read input2
+        done
+        pause_len=$((SECONDS - pause_len_start + pause_len))
+        duration=$((SECONDS - start - pause_len))
+        echo "resuming at $((duration/60)) / $mins minutes"
+        continue
+     
+    elif [ "$input" == "time" ] || [ "$input" == "t" ]; then
+        echo "Time remaining: $(((time-duration)/60)) minutes $(((time-duration)%60)) secs"
+    fi
+    duration=$(( SECONDS - start - pause_len))
+done
+
+if [ $# -lt 2 ]; then
+    eval "xmessage -nearmouse -timeout 60 -file ~/.getToClass"
+else
+    shift
+    eval "xmessage -nearmouse -timeout 60 $@"
+fi
+
