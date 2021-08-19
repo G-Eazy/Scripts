@@ -1,0 +1,7 @@
+#!/bin/bash
+
+eval "cd /"
+file_path=$(fzf --prompt="Where do you want to leap? ")
+folder_path_end=${file_path%/*}
+folder_path="/$folder_path_end"
+eval "cd $folder_path"

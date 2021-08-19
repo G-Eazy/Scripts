@@ -1,0 +1,2 @@
+#!/bin/bash
+echo "delete all files pertaining to a package/app"

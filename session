@@ -1,0 +1,194 @@
+#!/bin/bash
+
+# Author:   Greger Martinussen
+# Email:    greger.martinussen@protonmail.com
+# Desc:     Browser session manager for terminal 
+# Version:  1.0
+# Licence:  MIT
+
+source ~/bin/functions.sh
+
+browser="firefox"
+browser_new_window="$browser --new-window"
+browser_new_tab="$browser --new-tab"
+
+function usage() {
+    printf "Usage: session <OPTION>\nSave and restore window sessions in the browser.\n*** Requires brotabs ***\n
+    save:       saves one of the windows as a hidden file in $ HOME)/.session
+    qsave:      quicksave all windows with filname 'quicksave'
+    restore:    restores a session
+    list:       list and show saved sessions
+    remove:     delete one or more saved sessions
+    reset:      clear all sessions (clear .hidden files)
+    help:       display help\n
+
+    If you are using Google chrome, simply edit the source file variables at the top with the correct commands\n"
+}
+
+function qsave(){
+    eval "session save <<EOF 
+    all
+    quicksave
+    Quicksave
+    EOF" 2> /dev/null > /dev/null
+}
+
+function save() {
+    declare -a windows
+    declare -i window_index current_tabnum
+    eval "bt list > .bt_tmp"
+    current_tabnum=$(head -n 1 .bt_tmp | cut -c3-4 | sed "s/[^0-9]//g")
+    window_index=0
+    windows=()
+    while IFS='\n' read -r line; do
+        tabnum=$(echo $line | cut -c3-4 | sed "s/[^0-9]//g")
+        cut_line=$(echo $line | sed 's/.* //g')
+        if ! [ "$current_tabnum" -eq "$tabnum" ]; then
+            window_index=$((window_index + 1))
+            current_tabnum=$tabnum
+        fi
+
+        windows[$window_index]="${windows[$window_index]}$cut_line,"
+
+    done < .bt_tmp
+    
+    printf "Select which window to save (default [0]):\n"
+    for i in $(seq 0 $window_index);
+    do
+        printf "[$i] Window $i - First tab: ${windows[$i]%%,*}\n"
+    done
+    printf "[$((i+1))] All windows\n"
+    read input
+    while [ "$input" == "" ]; do
+        printf "Please select an option\n"
+        read input
+    done
+    printf "Save as: "
+    read filename
+    while [ "$filename" == "" ]; do
+        printf "filename is empty\n"
+        read filename
+    done
+    filename="$(echo $filename | sed 's/ /_/g')"
+
+    append=0
+    if ! [ -f ~/.session/$filename ]; then
+        printf "Comment: "
+        read comment
+        echo "Name: $filename" > ~/.session/$filename
+        echo "Date: $(date)" >> ~/.session/$filename
+        echo "Comment: $comment" >> ~/.session/$filename
+        echo "---" >> ~/.session/$filename
+    else 
+        printf "Append to existing session '$filename'?\n[y/n] "
+        read app
+        if [ "$app" == "y" ]; then 
+            append=1
+        else
+            return 0
+        fi
+    fi 
+    IFS=',' 
+    if [ "$input" == "all" ] || [ "$input" == "$((i+1))" ]; then
+        declare -i counter
+        counter=0
+        echo "Saving all windows"
+        for window in "${windows[@]}"; do
+            read -ra urls <<< "${windows[$counter]}"
+            for url in "${urls[@]}"; do
+                echo "$url" >> ~/.session/$filename
+            done
+            counter+=1
+            echo "window" >> ~/.session/$filename
+        done
+    else 
+        if [ $append == 1 ]; then
+            echo "window" >> ~/.session/$filename
+        fi
+        read -ra urls <<< "${windows[$input]}"
+        for url in "${urls[@]}"; do
+            echo "$url" >> ~/.session/$filename
+        done
+    fi 
+    rm .bt_tmp
+    printf "Session saved at $(date)\n"
+}
+
+function restore() {
+    msg="Choose a session to restore: "
+    cmd="restore"
+    manage_sessions "$msg" "$cmd"
+    
+}
+
+function list() {
+    msg="Choose a session to show: "
+    cmd="cat ~/.session/"
+    manage_sessions "$msg" "$cmd"
+
+}
+
+function remove() {
+    msg="Select a file to remove or press enter to exit: "
+    cmd="rm -v ~/.session/"
+    manage_sessions "$msg" "$cmd"
+}
+
+
+function reset() {
+    eval "rm -v ~/.session/*"
+}
+
+function help(){
+    printf "Installing brotabs (required as binary and as browser plug-in)
+    https://github.com/balta2ar/brotab\n"
+}
+
+function manage_sessions(){
+    echo "$1"
+    declare -i session_index
+    session_index=$(ls -1 ~/.session/ | wc -l)
+    session_index=$((session_index-1))
+    while read line
+    do
+        filenames=("${filenames[@]}" $line)
+    done <<< "$(ls -t -1 ~/.session/)"
+    for i in $(seq 0 $session_index);
+    do
+        filename=${filenames[$i]}
+        length=$(awk '/---/{ print NR; exit }' ~/.session/$filename)
+        length=$((length-1))
+        printf "[$i] "
+        printf "$(head -n $length ~/.session/$filename | sed 's/^/\t/')\n\n"
+    done
+    read file_index
+    while [ "$file_index" == "" ]; do
+        printf "Please select a session\n"
+        read file_index
+    done
+    if [ "$2" == "restore" ]; then
+        filename=${filenames[$file_index]}
+        flag="1"
+        declare -i offset
+        offset=$(awk '/---/{ print NR; exit }' ~/.session/$filename)
+        offset+=1
+        while read -r url; do
+            if [ $flag -eq "1" ]; then
+                eval "$browser_new_window $url"
+                flag="0"
+                sleep 1s
+            elif [ "$url" == "window" ]; then
+                flag="1"
+
+            else
+                eval "$browser_new_tab $url"
+            fi
+        done <<< "$(tail -n +$offset ~/.session/$filename)"
+
+    
+    else
+        eval "$2${filenames[$file_index]}"
+    fi
+}
+
+__args__ 1 "$@" 

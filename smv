@@ -1,0 +1,47 @@
+#!/bin/bash
+
+file_exists () {
+    echo "file '$1' exists, do you want to replace? [y/n]"
+    read input
+    if [ "$input" == "n" ]; then
+        return;
+    elif [ "$input" == "y" ]; then
+        shift
+        mv -v $@;
+    else
+        file_exists $1
+    fi
+}
+
+parse_filenames () {
+    dest=$1
+    shift
+    for filename in "${@:1:$#-1}"
+    do
+        filename_stripped=${filename##*/}
+        new_path="$dest/$filename_stripped"
+        if [ -f "$new_path" ]; then
+            file_exists "$new_path" "$filename" "$new_path"
+        else
+            mv -v $filename $new_path
+        fi
+
+    done
+}
+
+usage="Usage: smv <file> [files] <dest>\n"
+
+if [ $# -lt 2 ]; then
+    printf "$usage"
+    exit;
+fi
+
+dest="${@: -1}"
+
+if [ -f "$dest" ]; then
+    file_exists $dest $@
+elif [ -d "$dest" ]; then
+    parse_filenames $dest $@
+else
+    mv -v $@
+fi

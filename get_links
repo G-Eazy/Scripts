@@ -1,0 +1,7 @@
+#!/bin/bash
+# TODO: add https://www?, list links, add grep, interactive download
+urls="$(curl $1 | grep "$2" | cut -d "\"" -f4)"
+while read -r url; do
+    echo "wget $url"
+    eval "wget $url"
+done <<< "$urls"

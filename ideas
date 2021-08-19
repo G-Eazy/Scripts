@@ -1,0 +1,33 @@
+#!/bin/bash
+
+source functions.sh
+# TODO: generalize
+function view() {
+    eval "less ~/.ideas.txt"
+}
+
+function add() {
+    arg="init"
+    while [ true ]
+    do  
+        if [ ${#arg} -ne 0 ]; then
+            read arg
+            echo $arg >> ~/.ideas.txt
+        else
+            break;
+        fi
+    done
+}
+
+function edit() {
+    eval "vim ~/.ideas.txt"
+}
+
+
+function usage() {
+    printf "usage:\n$ ideas <option>\n\tview : dump file to terminal\n\tadd  : read new ideas from terminal until newline\n\tedit : edit .ideas.txt file\n"
+}
+
+__args__ 1 "$@"
+
+

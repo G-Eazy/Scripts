@@ -1,0 +1,27 @@
+#!/bin/bash
+
+
+function view() {
+    eval "cat ~/.todo.txt"
+}
+
+function add() {
+    arg="init"
+    while [  ${#arg} -ne 0  ]
+        do  
+            read arg
+            echo $arg >> ~/.todo.txt
+        done
+}
+
+function edit() {
+    eval "vim ~/.todo.txt"
+}
+
+if [ "$1" == "view" ]; then
+    view
+elif [ "$1" == "add" ]; then
+    add 
+elif [ "$1" == "edit" ]; then
+    edit 
+fi

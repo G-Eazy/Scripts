@@ -1,0 +1,35 @@
+#!/bin/bash
+
+function move_back() {
+    dest_=$1
+    source_=$2
+    if [ $(echo "$2" | head -c1) != "/" ]; then
+        working_dir=$(pwd)
+        source_="$working_dir/$2"
+        if [ $(echo "$1" | head -c1) != "/" ]; then
+            dest_="$working_dir/$1"
+        fi
+        echo "moving '$source_' back to '$dest_'"
+        eval "mv $source_ $dest_"
+    else
+        echo "moving '$source_' back to '$dest_'"
+        eval "mv $source_ $dest_"
+    fi
+}
+
+function restore() {
+    shift
+    echo "mv '$@' back to $pwd"
+}
+
+last_cmd=$@
+IFS=' ' 
+read -ra array <<< "$last_cmd"
+
+
+if [ ${array[0]} == "mv" ]; then
+    shift 
+    move_back $@
+fi
+
+

@@ -1,0 +1,65 @@
+# Author:   Greger Martinussen
+# Email:    greger.martinussen@protonmail.com
+# Desc:     Program session manager for terminal 
+# Version:  1.0
+# Licence:  MIT
+
+#!/usr/bin/bash
+source ~/bin/functions.sh
+
+fp=~/.program_session/session
+
+function usage() {
+    printf "Usage: session <OPTION>\n
+    save:       saves program session 
+    restore:    restores a program session
+    clear:      clear all program sessions (clear .hidden files)\n"
+}
+
+function save() {
+    prev_cmd_full="$(history | tail -n 2 | head -n 1)"
+    prev_cmd_array=($prev_cmd_full)
+    prev_cmd=${prev_cmd_array[@]:1}
+    echo "$prev_cmd" >> $fp
+}
+
+function restore() {
+    while read line
+    do
+        echo "$line"
+        eval "$line"
+        sleep 1s
+    done < $fp
+}
+
+function clear() {
+    rm $fp
+    touch $fp
+}
+
+function view() {
+    cat $fp
+}
+
+function edit() {
+    vim $fp
+}
+
+function s() {
+    save 2> /dev/null
+}
+function r() {
+    restore 
+}
+function c() {
+    clear 2> /dev/null
+}
+function v() { 
+    view 2> /dev/null
+}
+function e() {
+    edit 2> /dev/null
+}
+
+
+__args__ 1 "$@"

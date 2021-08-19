@@ -1,66 +1,146 @@
 #!/bin/bash
 
 # The almighty timer
+## TODO: make schedule. bc float operations
 
-# Create file if missing
-if [ ! -f ~/.getToClass ]; then
-    echo "
- _____    _____   _______        ________   ______
-/    /|  /    /| /      /|      /       /| /     /|
-*****/   *****/  *******/       ********/  ****** |
-* |  __  * |___     * |            * |     * |  * |
-* | / /| */   /|    * |            * |     * |  * |
-* | ** | *****/     * |            * |     * |  * |
-* |__* | * |___     * |            * |     * |__* |
-*/   * | */   /|    * |            * |     */   * |
-******/  *****/     */             */      ******/
-    ______   _        ___      _____   _____      _
-   /     /| //|      /  /\    /    /| /    /|    //|
-   ******/  * |      ***  /   *****/  *****/     * |
-   * |      * |     * | */|   * |___  * |___     * |
-   * |      * |     * | */|   */   /| */   /|    * |
-   * |      * |     ***** |   ***** | ***** |    */
-   * |____  * |___  * | * |       * |     * |     __
-   */    /| */   /| * | * |       * |     * |    / /|
-   ******/  *****/  */  */    *****/  *****/     **/
-    " >> ~/.getToClass
-fi
+source functions.sh
+filepath=~/.timer/
 
-declare -i time
+function start() {
+    filename=timer
+    counter=0
+    while [ -f $filepath$filename ]; do
+        filename=${filename:0:5}
+        filename=$filename$counter
+        counter=$((counter + 1))
+    done
+    filename=$filepath$filename
+    trap "{ rm $filename ; exit 255; }" SIGINT
 
-mins=$1
-timer=$mins
-time=$((mins * 60))
-start=$SECONDS
-duration=$(( SECONDS - start))
-pause_len=0
-echo "setting a timer for $mins minutes"
-while [ $duration -lt $time ]; do  
-    sleep 3s        # save some processor use
-    read -t 1 input
-    if [ "$input" == "pause" ] || [ "$input" == "p" ]; then
-        duration=$(( SECONDS - start - pause_len))
-        echo "pausing at $((duration/60)) / $mins minutes"
-        pause_len_start=$SECONDS
-        read input2
-        while [ "$input2" != "resume" ] && [ "$input2" != "r" ]; do
-            read input2
-        done
-        pause_len=$((SECONDS - pause_len_start + pause_len))
-        duration=$((SECONDS - start - pause_len))
-        echo "resuming at $((duration/60)) / $mins minutes"
-        continue
-     
-    elif [ "$input" == "time" ] || [ "$input" == "t" ]; then
-        echo "Time remaining: $(((time-duration)/60)) minutes $(((time-duration)%60)) secs"
-    fi
-    duration=$(( SECONDS - start - pause_len))
-done
-
-if [ $# -lt 2 ]; then
-    eval "xmessage -nearmouse -timeout 60 -file ~/.getToClass"
-else
+    declare -i time time_init
+    time_init=$1
+    time=$time_init
     shift
-    eval "xmessage -nearmouse -timeout 60 $@"
-fi
+    unit="$1"
+    shift
+    text="$@"
+    if [ "$text" == "" ]; then 
+        text="Timer completed"
+    fi
+    printf "$time $unit $text\n" > $filename 
+    # Converting to seconds
+    if [ "$unit" == "m" ] || [ "$unit" == "minutes" ]; then
+        time=$((time_init * 60))
+    elif [ "$unit" == "h" ] || [ "$unit" == "hours" ]; then
+        time=$((time_init * 60))
+        time=$((time * 60))
+    fi
+    
+    start=$SECONDS
+    duration=$(( SECONDS - start))
+    pause_len=0
+    # Beginning timer
+    while [ $duration -lt $time ]; do  
+        sleep 3s        # save some processor use
+        input=$(tail -n 1 $filename)
+        if [ "$input" == "exit" ]; then
+            printf "Exiting\n"
+            rm $filename
+            exit 0
+        fi
 
+        # Pause
+        if [ "$input" == "pause" ] || [ "$input" == "p" ]; then
+            duration=$(( SECONDS - start - pause_len))
+            __get_time__ "\nPausing at" "$time" "$duration"
+            pause_len_start=$SECONDS
+
+            # Resume
+            input2=$(tail -n 1 $filename)
+            while [ "$input2" != "resume" ] && [ "$input2" != "r" ]; do
+                sleep 3s        # save some processor use
+                input2=$(tail -n 1 $filename)
+            done
+            pause_len=$((SECONDS - pause_len_start + pause_len))
+            duration=$((SECONDS - start - pause_len))
+            __get_time__ "\nResuming at:" "$time" "$duration"
+            continue
+        # Display time 
+        elif [ "$input" == "time" ] || [ "$input" == "t" ]; then
+            printf "untime\n" >> $filename
+            __get_time__ "\nTime remaining:" "$time" "$duration"
+        fi
+        duration=$(( SECONDS - start - pause_len))
+    done
+    
+    xmessage -nearmouse -geometry 1000x1000 -timeout 600 $text
+    rm $filename
+}
+
+function __single_timer__() {
+    return $(ls -1 ~/.timer/ | wc -l)
+}
+
+function __action__() {
+    if [ "$1" == "start" ]; then
+        shift
+        start "$@"
+        exit 0
+    elif [ "$1" == "clear" ]; then
+        rm -v ~/.timer/*
+        exit 0
+    fi
+    __single_timer__
+    ret=$?
+    if [ $ret == 0 ]; then
+        printf "No active timers\n"
+    elif [ $ret == 1 ]; then
+        printf "$1\n" >> ~/.timer/timer
+    else
+        __manage_timers__ "$1"
+    fi
+}
+
+function __get_time__() {
+    text=$1
+    time=$2
+    duration=$3
+    hours=$(((time-duration)/3600))
+    mins=$((((time-duration)-(hours*3600))/60))
+    secs=$(((time-duration)%60))
+    printf "$text $hours hours, $mins minutes, $secs seconds\n"
+}
+
+function __manage_timers__(){
+    declare -i session_index
+    session_index=$(ls -1 ~/.timer/ | wc -l)
+    session_index=$((session_index-1))
+    while read line
+    do
+        filenames=("${filenames[@]}" $line)
+    done <<< "$(ls -t -1 ~/.timer/)"
+    for i in $(seq 0 $session_index);
+    do
+        filename=${filenames[$i]}
+        printf "[$i] "
+        printf "$filename\n\n"
+    done
+    printf "Select a timer to $1: "
+    read file_index
+    while [ "$file_index" == "" ]; do
+        printf "Please select a timer\n"
+        read file_index
+    done
+        printf "$1\n" >> $filepath${filenames[$file_index]}
+}
+
+function usage() {
+    printf "usage:\n$ timer <option> <value> <unit> [text]\n\toption: <s / start, p / pause, r / resume> action on a timer
+    \tvalue : number of [unit] to count down
+    \tunit  : <s, m, h> unit of time to count\n\ttext  : String of text to be displayed at countdown\n"
+}
+
+__args_default__ 1 __action__ "$@"
+
+
+#TODO: fix resume text bug

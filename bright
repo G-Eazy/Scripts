@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# apt install x11-xserver-utils
+
+screen_num=$1
+setting=$2
+num_screens="$(xrandr -q | grep ' connected' | wc -l)"
+screens="$(xrandr -q | grep ' connected' | head -n $num_screens | cut -d ' ' -f1)"
+declare -i screen_num
+
+# adjust screen brightness beyond keyboard buttons
+function change_brightness() {
+    eval "xrandr --output ${@:$screen_num:1} --brightness $setting"
+}
+
+change_brightness $screens
+

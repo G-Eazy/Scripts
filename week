@@ -1,0 +1,2 @@
+
+eval "curl --silent https://www.calendar-week.org/ | grep 'week for today' | grep -o [0-9]*"

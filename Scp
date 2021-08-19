@@ -1,0 +1,23 @@
+#!/bin/bash
+
+if [ $# -lt 1 ]; then
+    usage=$'usage: \n\tScp [option]\n\n\tOptions:\n\t\t-t : send to server\n\t\t-f : get from server.\n'
+    echo "$usage"
+    exit
+fi
+
+if [ $1 == "-t" ]; then
+    shift
+    for arg in $@; do
+        scp $arg gregerm@login.ifi.uio.no:~/SCP/
+    done
+elif [ $1 == "-f" ]; then
+    shift
+    for arg in $@; do
+        if [ $arg == ${@: -1} ]; then 
+            break
+        fi
+        scp gregerm@login.ifi.uio.no:/uio/hume/student-u13/gregerm/SCP/$arg ${@: -1}
+    done
+fi
+

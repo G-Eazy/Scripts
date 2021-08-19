@@ -1,0 +1,11 @@
+#!/bin/bash
+
+if [ "$1" == "1" ]; then
+    output="$(pactl list short sinks | cut -f2 | cut -f1 | head -n 1)"
+    eval "pacmd set-default-sink $output"
+elif [ "$1" == "2" ]; then
+    output="$(pactl list short sinks | cut -f2 | cut -f1 | tail -n 1)"
+    eval "pacmd set-default-sink $output"
+fi
+
+

@@ -1,0 +1,60 @@
+#!/bin/bash
+
+function gdiff() {
+    usage="Usage:\n\tgdiff <number of commits> [offset from log top]\n"
+    eval "git status &>/dev/null"
+    if [ "$?" != 0 ]; then
+        echo "Not in a git repo"
+        return
+    fi
+
+    if [ -z $1 ]; then
+        printf "$usage"
+        return
+    fi
+
+    arg1=$1
+    if [ -z ${arg1} ]; then
+        arg=2
+    fi
+
+    arg2=$2
+    if [ -z ${arg2} ]; then
+        arg=0
+    fi
+    
+    filename="$PWD/.lastXcommits"
+    filename2="$PWD/.lastXcommits2"
+    while [ -f $filename ]; do
+        filename=$filename"0"
+        filename2=$filename2"0"
+    done
+    git log --skip=$2 -n $1 > $filename 
+    printf "Comparing these commits:\n\n*****\n"
+    cat $filename
+    echo "*****"
+    tac $filename > $filename2
+    read buffer
+
+    commit_array=()
+    declare -i i
+    i=0
+    while IFS=' ' read -r line; do
+        if [[ $line == 'commit'* ]]; then
+            commit_array[i]=${line:7}
+            i+=1
+        fi
+    done < $filename2
+
+    cmd="git diff "
+    for commit in ${commit_array[@]}
+    do
+        cmd="$cmd $commit "
+    done
+
+    eval $cmd
+    eval "rm $filename $filename2"
+
+}
+
+gdiff $@

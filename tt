@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Spotify controls
+if [ "$1" == "-h" ]; then 
+    printf "[none]: pause\nn: next\np: previous\n"
+elif [ "$1" == "n" ]; then 
+    eval "dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Next &>/dev/null"
+elif [ "$1" == "p" ]; then 
+    eval "dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Previous &>/dev/null"
+else
+    eval "dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.PlayPause &>/dev/null" 
+fi
